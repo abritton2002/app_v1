@@ -10,11 +10,12 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 from DataCollector.CollectDataController import *
-import tkinter as tk
+import tkinter as tkf
 from tkinter import filedialog
 
 from DataCollector.CollectionMetricsManagement import CollectionMetricsManagement
 from Plotter import GenericPlot as gp
+from DataCollector.FilenameGeneratorDialog import FilenameGeneratorDialog
 
 
 class CollectDataWindow(QWidget):
@@ -67,6 +68,7 @@ class CollectDataWindow(QWidget):
         buttonPanel.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         buttonLayout = QVBoxLayout()
         findSensor_layout = QHBoxLayout()
+        
         # ---- Pair Button
         self.pair_button = QPushButton('Pair', self)
         self.pair_button.setToolTip('Pair Sensors')
@@ -156,6 +158,16 @@ class CollectDataWindow(QWidget):
         self.SensorListBox.itemClicked.connect(self.sensorList_callback)
         self.SensorListBox.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         buttonLayout.addWidget(self.SensorListBox)
+        
+        # ---- Assign Muscle Name Button
+        self.assign_muscle_button = QPushButton('Assign Muscle Name', self)
+        self.assign_muscle_button.setToolTip('Assign a muscle name to the selected sensor')
+        self.assign_muscle_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        self.assign_muscle_button.clicked.connect(self.rename_sensor)
+        self.assign_muscle_button.setStyleSheet('QPushButton {color: white;}')
+        self.assign_muscle_button.setFixedHeight(40)
+        buttonLayout.addWidget(self.assign_muscle_button)
+        
         buttonPanel.setLayout(buttonLayout)
         buttonPanel.setFixedWidth(275)
         return buttonPanel
@@ -256,7 +268,6 @@ class CollectDataWindow(QWidget):
         self.t2.start()
 
         self.BeginPairingUISequence()
-
 
     def BeginPairingUISequence(self):
         """The awaiting sensor window will stay open until either:
@@ -365,13 +376,45 @@ class CollectDataWindow(QWidget):
         self.exportcsv_button.setStyleSheet("color : white")
 
     def exportcsv_callback(self):
-        export = None
-        if self.CallbackConnector.streamYTData:
-            export = self.CallbackConnector.base.csv_writer.exportYTCSV()
-        else:
-            export = self.CallbackConnector.base.csv_writer.exportCSV()
-        self.getpipelinestate()
-        print("CSV Export: " + str(export))
+        # Open filename generation dialog
+        filename_dialog = FilenameGeneratorDialog(self)
+        
+        if filename_dialog.exec() == QDialog.Accepted:
+            # Get the generated filename
+            custom_filename = filename_dialog.get_filename()
+            
+            # Set the custom filename in the CSV writer
+            self.CallbackConnector.base.csv_writer.set_custom_filename(custom_filename)
+            
+            # Get muscle names from the sensor mappings (if available)
+            if hasattr(self.CallbackConnector.base, 'sensor_muscle_map'):
+                # Find which sensors are being used (first two for simplicity)
+                sensors = self.CallbackConnector.base.TrigBase.GetScannedSensorsFound()
+                if len(sensors) >= 2:
+                    sensor1_num = sensors[0].PairNumber
+                    sensor2_num = sensors[1].PairNumber
+                    
+                    # Get their assigned muscle names (if any)
+                    muscle1 = self.CallbackConnector.base.sensor_muscle_map.get(sensor1_num, "")
+                    muscle2 = self.CallbackConnector.base.sensor_muscle_map.get(sensor2_num, "")
+                    
+                    # Set in CSV writer
+                    self.CallbackConnector.base.csv_writer.set_muscle_names(
+                        muscle1_name=muscle1,
+                        muscle2_name=muscle2,
+                        muscle1_id=str(sensor1_num),
+                        muscle2_id=str(sensor2_num)
+                    )
+            
+            # Export CSV
+            export = None
+            if self.CallbackConnector.streamYTData:
+                export = self.CallbackConnector.base.csv_writer.exportYTCSV()
+            else:
+                export = self.CallbackConnector.base.csv_writer.exportCSV()
+            
+            self.getpipelinestate()
+            print("CSV Export: " + str(export))
 
     def sensorList_callback(self):
         current_selected = self.SensorListBox.currentRow()
@@ -408,3 +451,38 @@ class CollectDataWindow(QWidget):
                 self.set_sensor_list_box(sensorList)
                 self.SensorModeList.setCurrentText(selMode)
                 self.SensorListBox.setCurrentRow(curItem)
+                
+    def rename_sensor(self):
+        """Allow user to assign a muscle name to the selected sensor"""
+        if self.SensorListBox.currentRow() >= 0:
+            # Get the currently selected sensor
+            current_row = self.SensorListBox.currentRow()
+            sensor = self.CallbackConnector.base.TrigBase.GetScannedSensorsFound()[current_row]
+            
+            # Prompt for the muscle name
+            muscle_name, ok = QInputDialog.getText(
+                self, 
+                "Assign Muscle Name", 
+                f"Enter muscle name for Sensor {sensor.PairNumber}:",
+                QLineEdit.Normal,
+                ""  # Empty default
+            )
+            
+            if ok and muscle_name:
+                # Store the association
+                if not hasattr(self.CallbackConnector.base, 'sensor_muscle_map'):
+                    self.CallbackConnector.base.sensor_muscle_map = {}
+                    
+                # Map sensor number to muscle name
+                self.CallbackConnector.base.sensor_muscle_map[sensor.PairNumber] = muscle_name
+                
+                # Update the display in the list box
+                current_text = self.SensorListBox.item(current_row).text()
+                new_text = f"({sensor.PairNumber}) {sensor.FriendlyName} - {muscle_name}"
+                
+                # If there are multiple lines (with channel info), keep those
+                if "\n" in current_text:
+                    base_text, *channel_lines = current_text.split("\n")
+                    new_text = new_text + "\n" + "\n".join(channel_lines)
+                    
+                self.SensorListBox.item(current_row).setText(new_text)

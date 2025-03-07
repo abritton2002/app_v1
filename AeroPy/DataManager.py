@@ -12,7 +12,9 @@ class DataKernel():
         self.TrigBase = trigno_base.TrigBase
         self.packetCount = 0
         self.sampleCount = 0
-        self.allcollectiondata = []
+        
+        # Initialize with empty lists for each channel
+        self.allcollectiondata = [[] for _ in range(len(trigno_base.channel_guids))]
         self.channel1time = []
         self.channel_guids = []
 

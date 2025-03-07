@@ -11,13 +11,14 @@ load("coreclr")
 import clr
 import csv
 
-clr.AddReference("resources\DelsysAPI")
+clr.AddReference(r"resources\DelsysAPI")
 clr.AddReference("System.Collections")
 
 from Aero import AeroPy
 
-key = ""
-license = ""
+key = """MIIBKjCB4wYHKoZIzj0CATCB1wIBATAsBgcqhkjOPQEBAiEA/////wAAAAEAAAAAAAAAAAAAAAD///////////////8wWwQg/////wAAAAEAAAAAAAAAAAAAAAD///////////////wEIFrGNdiqOpPns+u9VXaYhrxlHQawzFOw9jvOPD4n0mBLAxUAxJ02CIbnBJNqZnjhE50mt4GffpAEIQNrF9Hy4SxCR/i85uVjpEDydwN9gS3rM6D0oTlF2JjClgIhAP////8AAAAA//////////+85vqtpxeehPO5ysL8YyVRAgEBA0IABGKabwf6WJt8O8a4lc4x6teFMBJ5vVhv8QFIjAmnpdcnkoxtTDwsHWVEZMesU+AxhToBk+tEBHYthYN7TbJQR1c="""
+
+license = """<License>  <Id>d2f00e61-aaef-48e8-a528-bd26f557a676</Id>  <Type>Standard</Type>  <Quantity>10</Quantity>  <LicenseAttributes>    <Attribute name='Software'></Attribute>  </LicenseAttributes>  <ProductFeatures>    <Feature name='Sales'>True</Feature>    <Feature name='Billing'>False</Feature>  </ProductFeatures>  <Customer>    <Name>Alex Britton</Name>    <Email>abritton2002@gmail.com</Email>  </Customer>  <Expiration>Wed, 07 Mar 2035 05:00:00 GMT</Expiration>  <Signature>MEQCIHxMUYw11TXg2W8iIJl9BhfBFYuPBdNKMExwP+9EFoMHAiBeyWZ8cl6ckQKNEKg6XIbMSEJCjsCmn+WD8xLLnG/hmQ==</Signature></License>"""
 
 
 class TrignoBase():
